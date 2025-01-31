@@ -6,13 +6,20 @@ import json
 # Import the 'boto3' library for interacting with AWS services like MediaConvert and S3
 import boto3
 
-# Import specific configuration variables from the 'config.py' module
-from config import (
-    AWS_REGION,               # AWS region where services are deployed (e.g., 'us-east-1')
-    MEDIACONVERT_ENDPOINT,    # The endpoint URL for AWS MediaConvert service
-    MEDIACONVERT_ROLE_ARN,    # The Amazon Resource Name (ARN) for the IAM role used by MediaConvert
-    S3_BUCKET_NAME            # The name of the Amazon S3 bucket used for input/output data
-)
+# Import the 'dotenv' library to load environment variables from a .env file
+from dotenv import load_dotenv
+
+# Import the 'os' module to access environment variables
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Fetch environment variables
+AWS_REGION = os.getenv('AWS_REGION')
+MEDIACONVERT_ENDPOINT = os.getenv('MEDIACONVERT_ENDPOINT')
+MEDIACONVERT_ROLE_ARN = os.getenv('MEDIACONVERT_ROLE_ARN')
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
 
 def create_job():
     """
@@ -22,6 +29,10 @@ def create_job():
     and submits a job to AWS MediaConvert for processing a video file stored in S3.
     """
     try:
+        if not MEDIACONVERT_ROLE_ARN:
+            print("Error: MEDIACONVERT_ROLE_ARN not set in environment variables")
+            return
+            
         # Initialize the MediaConvert client with specified region and endpoint
         mediaconvert = boto3.client(
             "mediaconvert",                    # AWS MediaConvert service
