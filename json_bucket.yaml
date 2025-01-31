@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create an S3 bucket with specified permissions.
+
+Resources:
+  MyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: json-store-acm
+
+  MyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: mediaconvert
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: mediaconvert.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  MyBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: json-store-acm
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:PutObject
+            Resource:
+              - arn:aws:s3:::json-store-acm
+              - arn:aws:s3:::json-store-acm/*
+
+  MyRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: FullMediaConverterAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:PutObject
+            Resource:
+              - arn:aws:s3:::json-store-acm
+              - arn:aws:s3:::json-store-acm/*
+      Roles:
+        - !Ref MyRole
+
+  MyRolePolicyAttachment:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/MediaConvertFullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
+      Roles:
+        - !Ref MyRole
