@@ -1,4 +1,22 @@
 # fetch.py
+from dotenv import load_dotenv
+import os
+import requests
+from time import sleep
+from config import RETRY_COUNT, RETRY_DELAY
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Fetch environment variables
+API_URL = os.getenv('API_URL')
+RAPIDAPI_HOST = os.getenv('RAPIDAPI_HOST')
+RAPIDAPI_KEY = os.getenv('RAPIDAPI_KEY')
+DATE = os.getenv('DATE')
+LEAGUE_NAME = os.getenv('LEAGUE_NAME')
+LIMIT = os.getenv('LIMIT')
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')     # The name of the S3 bucket where data will be stored
+AWS_REGION = os.getenv('AWS_REGION')             # The AWS region where the S3 bucket is located 
 
 # Import the 'json' module for handling JSON data
 import json
@@ -6,68 +24,31 @@ import json
 # Import the 'boto3' library for interacting with AWS services like S3
 import boto3
 
-# Import the 'requests' library for making HTTP requests to external APIs
-import requests
 
-# Import specific configuration variables from the 'config.py' module
-from config import (
-    API_URL,             # The endpoint URL for fetching sports highlights
-    RAPIDAPI_HOST,       # The host for the RapidAPI service
-    RAPIDAPI_KEY,        # The API key for authenticating with RapidAPI
-    DATE,                # The date for which to fetch highlights
-    LEAGUE_NAME,         # The name of the basketball league (e.g., NCAA)
-    LIMIT,               # The maximum number of highlights to fetch
-    S3_BUCKET_NAME,      # The name of the S3 bucket where data will be stored
-    AWS_REGION,          # The AWS region where the S3 bucket is located
-)
 
 def fetch_highlights():
-    """
-    Fetch basketball highlights from the API.
-    
-    This function makes a GET request to the specified API endpoint with the necessary
-    headers and query parameters to retrieve basketball highlights. It handles any
-    request-related exceptions and returns the fetched highlights as a JSON object.
-    
-    Returns:
-        dict or None: The fetched highlights as a JSON dictionary if successful; otherwise, None.
-    """
-    try:
-        # Define the query parameters for the API request
-        query_params = {
-            "date": DATE,            # The specific date for which to fetch highlights
-            "leagueName": LEAGUE_NAME,  # The name of the league (e.g., NCAA)
-            "limit": LIMIT            # The maximum number of highlights to retrieve
-        }
-        
-        # Define the headers for the API request, including authentication details
-        headers = {
-            "X-RapidAPI-Key": RAPIDAPI_KEY,      # API key for RapidAPI authentication
-            "X-RapidAPI-Host": RAPIDAPI_HOST     # Hostname for the RapidAPI service
-        }
-
-        # Make a GET request to the API endpoint with the specified headers and query parameters
-        # Set a timeout of 120 seconds to prevent hanging requests
-        response = requests.get(API_URL, headers=headers, params=query_params, timeout=120)
-        
-        # Raise an HTTPError if the HTTP request returned an unsuccessful status code
-        response.raise_for_status()
-        
-        # Parse the JSON response from the API
-        highlights = response.json()
-        
-        # Print a success message to indicate that highlights were fetched successfully
-        print("Highlights fetched successfully!")
-        
-        # Return the parsed highlights data
-        return highlights
-
-    except requests.exceptions.RequestException as e:
-        # Catch any exceptions related to the HTTP request and print an error message
-        print(f"Error fetching highlights: {e}")
-        
-        # Return None to indicate that fetching highlights failed
-        return None
+    for attempt in range(RETRY_COUNT):
+        try:
+            query_params = {"date": DATE, "leagueName": LEAGUE_NAME, "limit": LIMIT}
+            headers = {"x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": RAPIDAPI_HOST}
+            response = requests.get(API_URL, headers=headers, params=query_params, timeout=120)
+            
+            # Raise an HTTPError if the HTTP request returned an unsuccessful status code
+            response.raise_for_status()
+            
+            # Parse the JSON response from the API
+            highlights = response.json()
+            
+            # Print a success message to indicate that highlights were fetched successfully
+            print("Highlights fetched successfully!")
+            
+            # Return the parsed highlights data
+            return highlights
+        except requests.exceptions.RequestException as e:
+            print(f"Attempt {attempt+1} failed: {e}")
+            if attempt < RETRY_COUNT - 1:
+                sleep(RETRY_DELAY)
+    return None
 
 def save_to_s3(data, file_name):
     """
@@ -122,7 +103,6 @@ def save_to_s3(data, file_name):
     except Exception as e:
         # Catch any exceptions related to S3 operations and print an error message
         print(f"Error saving to S3: {e}")
-
 def process_highlights():
     """
     Main function to fetch and process basketball highlights.
