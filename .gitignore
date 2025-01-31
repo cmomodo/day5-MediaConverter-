@@ -1,1 +1,7 @@
 .env
+
+#ignore ds store
+.DS_Store
+
+#ignore cpython cache
+__pycache__/

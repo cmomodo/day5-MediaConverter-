@@ -6,6 +6,9 @@ import json
 # Import the 'boto3' library for interacting with AWS services like MediaConvert and S3
 import boto3
 
+# Import the 'datetime' module for handling date and time objects
+from datetime import datetime
+
 # Import the 'dotenv' library to load environment variables from a .env file
 from dotenv import load_dotenv
 
@@ -20,6 +23,13 @@ AWS_REGION = os.getenv('AWS_REGION')
 MEDIACONVERT_ENDPOINT = os.getenv('MEDIACONVERT_ENDPOINT')
 MEDIACONVERT_ROLE_ARN = os.getenv('MEDIACONVERT_ROLE_ARN')
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+
+# Add custom JSON encoder
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 def create_job():
     """
@@ -72,51 +82,45 @@ def create_job():
                                 "Container": "MP4",       # Output container format (MP4)
                                 "Mp4Settings": {}         # Additional MP4-specific settings (empty for defaults)
                             },
-                            "VideoDescription": {  # Description of video settings
-                                "CodecSettings": {  # Codec configuration for video
-                                    "Codec": "H_264",  # Video codec to use (H.264)
-                                    "H264Settings": {  # Specific settings for H.264 codec
-                                        "Bitrate": 5000000,              # Bitrate in bits per second
-                                        "RateControlMode": "CBR",        # Constant Bit Rate control mode
-                                        "QualityTuningLevel": "SINGLE_PASS",  # Quality tuning level
-                                        "CodecProfile": "MAIN"            # H.264 codec profile
+                            "VideoDescription": {
+                                "CodecSettings": {
+                                    "Codec": "H_264",
+                                    "H264Settings": {
+                                        "Bitrate": 5000000,
+                                        "RateControlMode": "CBR",
+                                        "QualityTuningLevel": "SINGLE_PASS",
+                                        "CodecProfile": "MAIN"
                                     }
                                 },
-                                "ScalingBehavior": "DEFAULT",  # Behavior for scaling video resolution
-                                "TimecodeInsertion": "DISABLED"  # Disable timecode insertion
+                                "Width": 1920,
+                                "Height": 1080
                             },
-                            "AudioDescriptions": [  # List of audio configurations
-                                {
-                                    "CodecSettings": {  # Codec configuration for audio
-                                        "Codec": "AAC",  # Audio codec to use (AAC)
-                                        "AacSettings": {  # Specific settings for AAC codec
-                                            "Bitrate": 64000,           # Bitrate in bits per second
-                                            "CodingMode": "CODING_MODE_2_0",  # Audio coding mode (2.0 channels)
-                                            "SampleRate": 48000        # Audio sample rate in Hz
-                                        }
+                            "AudioDescriptions": [{
+                                "CodecSettings": {
+                                    "Codec": "AAC",
+                                    "AacSettings": {
+                                        "Bitrate": 96000,
+                                        "CodingMode": "CODING_MODE_2_0",
+                                        "SampleRate": 48000
                                     }
                                 }
-                            ]
+                            }]
                         }
                     ]
                 }
             ]
         }
 
-        # Submit the MediaConvert job with the defined settings and additional parameters
+        # Use custom encoder when creating job
         response = mediaconvert.create_job(
             Role=MEDIACONVERT_ROLE_ARN,                 # IAM role ARN that MediaConvert assumes
             Settings=job_settings,                      # Job settings defined above
-            AccelerationSettings={"Mode": "DISABLED"},  # Disable acceleration settings
             StatusUpdateInterval="SECONDS_60",           # Interval for status updates (every 60 seconds)
-            Priority=0                                   # Priority of the job (0 is default)
+            Queue="Default"                              # Queue for the job
         )
 
         # Print a success message indicating the job was created
-        print("MediaConvert job created successfully:")
-
-        # Pretty-print the JSON response from MediaConvert
-        print(json.dumps(response, indent=4))
+        print(f"MediaConvert job created successfully: {response['Job']['Id']}")
 
     except Exception as e:
         # Catch any exceptions that occur during job creation and print an error message
