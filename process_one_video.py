@@ -18,6 +18,9 @@ from dotenv import load_dotenv
 # Import the 'os' module to access environment variables
 import os
 
+# Import 'YouTube' from the 'pytube' module to download YouTube videos
+import yt_dlp
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -26,6 +29,30 @@ AWS_REGION = os.getenv('AWS_REGION')
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
 INPUT_KEY = os.getenv('INPUT_KEY')
 OUTPUT_KEY = os.getenv('OUTPUT_KEY')
+
+def download_video(video_url, output_path):
+    output_file = os.path.join(output_path, 'first_video.mp4')
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': output_file,
+        'quiet': True
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([video_url])
+        print(f"Download completed successfully! File saved to: {output_file}")
+        return output_file
+    except Exception as e:
+        print(f"An error occurred during download: {e}")
+        return None
+
+def upload_to_s3(file_path, bucket_name, s3_key):
+    s3 = boto3.client('s3', region_name=AWS_REGION)
+    try:
+        s3.upload_file(file_path, bucket_name, s3_key)
+        print(f"Video uploaded to S3: s3://{bucket_name}/{s3_key}")
+    except Exception as e:
+        print(f"An error occurred during upload: {e}")
 
 def process_one_video():
     """
@@ -48,33 +75,27 @@ def process_one_video():
         try:
             # Retrieve the JSON file from S3 using the specified bucket and key
             response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=INPUT_KEY)
-
-            # Read the content of the retrieved object and decode it from bytes to a UTF-8 string
             json_content = response['Body'].read().decode('utf-8')
-
-            # Parse the JSON string into a Python dictionary
             highlights = json.loads(json_content)
 
             if not highlights:
                 print("No highlights data found")
                 return
 
-            # Extract the first video URL from the JSON data
+            # Extract video URL
             video_url = highlights[0]["url"]
-
-            # Inform the user about the video URL being processed
             print(f"Processing video URL: {video_url}")
 
-            # Download the video from the extracted URL
-            video_response = requests.get(video_url)
-            video_data = video_response.content
+            # Download video using yt_dlp
+            output_path = '/tmp'
+            video_path = download_video(video_url, output_path)
+            
+            if video_path:
+                upload_to_s3(video_path, S3_BUCKET_NAME, OUTPUT_KEY)
+                os.remove(video_path)
 
-            # Upload the downloaded video to the specified S3 location
-            s3.put_object(Bucket=S3_BUCKET_NAME, Key=OUTPUT_KEY, Body=video_data)
-            print(f"Video uploaded to S3: s3://{S3_BUCKET_NAME}/{OUTPUT_KEY}")
-        
         except Exception as e:
-            print(f"Error fetching JSON file from S3: {e}")
+            print(f"Error processing video: {e}")
     
     except Exception as e:
         print(f"Error initializing S3 client: {e}")
