@@ -14,8 +14,8 @@ variable "availability_zones" {
   type        = list(string)
 }
 
-variable "vpc_cidr" {
-  description = "The CIDR block for the VPC"
+variable "vpc_id" {
+  description = "The ID of the VPC"
   type        = string
 }
 
@@ -29,10 +29,6 @@ variable "ecr_repository_name" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "VPC ID"
-  type        = string
-}
 
 variable "public_subnets" {
   description = "List of public subnet IDs"
