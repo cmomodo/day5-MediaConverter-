@@ -1,0 +1,11 @@
+#ignore terraform lock file
+.terraform.lock.hcl
+
+#ignore terraform plugin cache
+.terraform/plugins/*
+
+#ignore terraform state file
+terraform.tfstate
+
+#ignore tfvars file
+*.tfvars
