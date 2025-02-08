@@ -29,8 +29,8 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
 # IAM policy document for custom IAM policy (example)
 data "aws_iam_policy_document" "custom_policy" {
   statement {
-    actions   = ["s3:GetObject", "s3:PutObject"]
-    effect = "Allow"
+    actions = ["s3:GetObject", "s3:PutObject"]
+    effect  = "Allow"
     resources = [
       "arn:aws:s3:::${var.bucket_name}",
       "arn:aws:s3:::${var.bucket_name}/*"
@@ -38,29 +38,29 @@ data "aws_iam_policy_document" "custom_policy" {
   }
 
   # SSM Parameter Store Permissions
-statement {
-  actions = [
-    "ssm:GetParameter",
-    "ssm:GetParameters",
-    "ssm:GetParameterHistory",
-  ]
-  effect = "Allow"
-  resources = [
-    "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/highlight-pipeline-final/*",
-    "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/NCAHighlightsBackup/*",
-  ]
-}
+  statement {
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+      "ssm:GetParameterHistory",
+    ]
+    effect = "Allow"
+    resources = [
+      "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/highlight-pipeline-final/*",
+      "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/NCAHighlightsBackup/*",
+    ]
+  }
 
-#MediaConvert Permissions
-statement {
-  actions = [
-    "mediaconvert:CreateJob*",
-    "mediaconvert:ListJobs",
-    "mediaconvert:GetJob",
-  ]
-  effect = "Allow"
-  resources = ["*"]
-}
+  #MediaConvert Permissions
+  statement {
+    actions = [
+      "mediaconvert:CreateJob*",
+      "mediaconvert:ListJobs",
+      "mediaconvert:GetJob",
+    ]
+    effect    = "Allow"
+    resources = ["*"]
+  }
 }
 
 
@@ -69,7 +69,7 @@ statement {
 resource "aws_iam_policy" "custom_policy" {
   name        = "${var.project_name}-ecs-custom-policy"
   description = "Custom IAM policy for the project"
-  policy      = data.aws_iam_policy_document.ecs_custom_policy.json
+  policy      = data.aws_iam_policy_document.custom_policy.json
 }
 
 #attach the customer iam policy to the ecs task execution role
@@ -115,7 +115,7 @@ data "aws_iam_policy_document" "mediaconvert_policy" {
       "logs:CreateLogStream",
       "logs:PutLogEvents"
     ]
-    effect    = "Allow"
+    effect = "Allow"
     resources = [
       "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/ecs/${var.project_name}*",
     ]
@@ -125,7 +125,7 @@ data "aws_iam_policy_document" "mediaconvert_policy" {
 # Create the MediaConvert policy
 resource "aws_iam_policy" "mediaconvert_policy" {
   name   = "${var.project_name}-mediaconvert-s3-logs"
-  policy = data.aws_iam_policy_document.mediaconvert_policy_doc.json
+  policy = data.aws_iam_policy_document.mediaconvert_policy.json
 }
 
 # Attach the MediaConvert policy to the MediaConvert role
