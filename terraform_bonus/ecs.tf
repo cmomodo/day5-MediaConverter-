@@ -16,23 +16,17 @@ resource "aws_ecs_task_definition" "my_cluster" {
   cpu                      = 256
   memory                   = 512
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = "${var.project_name}-container"
-      image     = "${aws_ecr_repository.my_repository.repository_url}:latest"
-      essential = true
-
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = "/ecs/${var.project_name}"
-          "awslogs-region"        = var.region
-          "awslogs-stream-prefix" = "ecs"
-        }
-      }
-    }
-  ])
+  container_definitions = templatefile("${path.module}/container_definitions.tpl", {
+    ecr_image_url             = "${aws_ecr_repository.my_repository.repository_url}:latest"
+    aws_region                = var.region
+    log_group_name            = aws_cloudwatch_log_group.my_cluster.name
+    bucket_name               = var.bucket_name
+    mediaconvert_endpoint     = var.mediaconvert_endpoint
+    mediaconvert_role_arn     = var.mediaconvert_role_arn
+    rapidapi_ssm_parameter_arn = var.rapidapi_ssm_parameter_arn
+  })
 }
 
 #ecs service

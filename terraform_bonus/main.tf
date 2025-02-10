@@ -7,6 +7,10 @@ terraform {
   }
 }
 
+locals {
+  container_definitions = file("./container_definitions.fpl")
+}
+
 # Configure the AWS Provider
 provider "aws" {
   region = var.region

@@ -34,3 +34,41 @@ aws iam create-policy \
 
 aws iam attach-user-policy \\n  --user-name <user-name> \\n  --policy-arn arn:aws:iam::<account number></account>:policy/MyUpdatedMediaConvertPolicy
 ```
+
+##### Create the ecr repository
+
+```bash
+ aws ecr create-repository --repository-name highlight-pipeline
+```
+
+##### log into the ecr repository
+
+```bash
+aws ecr get-login-password --region <REGION> | docker login --username AWS --password-stdin <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com
+```
+
+##### Build the docker image
+
+```bash
+docker build -t highlight-pipeline:latest .
+docker tag highlight-pipeline:latest <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/highlight-pipeline:latest
+```
+
+##### Push the docker image
+
+```bash
+docker push <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/highlight-pipeline:latest
+```
+
+##### Destroy the ECR container
+
+```bash
+aws ecr delete-repository --repository-name highlight-pipeline --force
+```
+
+##### Destroy the Terraform infrastructure
+
+```bash
+
+terraform destroy -auto-approve
+```
